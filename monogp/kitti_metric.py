@@ -5,7 +5,7 @@ from mmdet3d.registry import METRICS
 
 
 @METRICS.register_module()
-class XKittiMetric(KittiMetric):
+class MonoGpKittiMetric(KittiMetric):
 
     def convert_annos_to_kitti_annos(self, data_infos: dict) -> List[dict]:
         data_annos = super().convert_annos_to_kitti_annos(data_infos)
