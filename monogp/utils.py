@@ -1,8 +1,4 @@
-from typing import Tuple, Union
-
 import torch
-import numpy as np
-from torch import Tensor
 
 from mmdet3d.structures import points_img2cam
 from mmdet3d.utils import array_converter

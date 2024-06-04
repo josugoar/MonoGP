@@ -1,7 +1,7 @@
 from mmcv.transforms import BaseTransform
 
-from mmdet3d.structures import box3d_to_bbox, points_cam2img
 from mmdet3d.registry import TRANSFORMS
+from mmdet3d.structures import box3d_to_bbox, points_cam2img
 
 
 @TRANSFORMS.register_module()
@@ -26,9 +26,8 @@ class BottomCenterToCenters2DWithDepth(BaseTransform):
         gt_bboxes_3d = input_dict['gt_bboxes_3d']
         cam2img = input_dict['cam2img']
 
-        centers_2d_with_depth = points_cam2img(gt_bboxes_3d.bottom_center,
-                                               cam2img,
-                                               with_depth=True)
+        centers_2d_with_depth = points_cam2img(
+            gt_bboxes_3d.bottom_center, cam2img, with_depth=True)
 
         input_dict['centers_2d'] = centers_2d_with_depth[:, :2]
         input_dict['depths'] = centers_2d_with_depth[:, 2]
@@ -47,9 +46,8 @@ class ObjectPlaneAlignment(BaseTransform):
         gt_bboxes_3d.tensor[:, 4] += plane[3] - gt_bboxes_3d.bottom_height
         gt_bboxes_3d.tensor[:, 1] = plane[3]
 
-        centers_2d_with_depth = points_cam2img(gt_bboxes_3d.gravity_center,
-                                               cam2img,
-                                               with_depth=True)
+        centers_2d_with_depth = points_cam2img(
+            gt_bboxes_3d.gravity_center, cam2img, with_depth=True)
 
         input_dict['centers_2d'] = centers_2d_with_depth[:, :2]
         input_dict['depths'] = centers_2d_with_depth[:, 2]

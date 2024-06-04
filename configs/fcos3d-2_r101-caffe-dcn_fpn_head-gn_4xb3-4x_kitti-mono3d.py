@@ -5,14 +5,15 @@ model = dict(
     bbox_head=dict(
         type='PGDHead',
         pred_bbox2d=True,
-        group_reg_dims=(2, 1, 3, 1, 16, 4),  # offset, depth, size, rot, kpts, bbox2d
+        group_reg_dims=(2, 1, 3, 1, 16,
+                        4),  # offset, depth, size, rot, kpts, bbox2d
         reg_branch=(
             (256, ),  # offset
             (256, ),  # depth
             (256, ),  # size
             (256, ),  # rot
             (256, ),  # kpts
-            (256, )   # bbox2d
+            (256, )  # bbox2d
         ),
         use_depth_classifier=False,
         pred_keypoints=True,

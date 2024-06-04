@@ -8,13 +8,12 @@ model = dict(
         type='MonoGpFCOS3DMono3DHead',
         reg_branch=(
             (256, ),  # offset
-            (),       # depth
+            (),  # depth
             (256, ),  # size
             (256, ),  # rot
         ),
         bbox_coder=dict(
-            type='MonoGpFCOS3DBBoxCoder',
-            base_depths=((1.0, 0.0), ))))
+            type='MonoGpFCOS3DBBoxCoder', base_depths=((1.0, 0.0), ))))
 
 backend_args = None
 

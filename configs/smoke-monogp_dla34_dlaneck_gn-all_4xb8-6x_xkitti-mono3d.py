@@ -9,7 +9,7 @@ model = dict(
         pred_shift_height=False,
         reg_branch=(
             (256, ),  # offset
-            (),       # depth
+            (),  # depth
             (256, ),  # size
             (256, ),  # rot
         ),

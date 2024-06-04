@@ -43,8 +43,8 @@ class MonoGpTest(Base3DDetector):
                                                        self.origin)
 
             result = InstanceData()
-            result.bboxes_3d = box_type_3d(bboxes_3d.tensor,
-                                           origin=self.origin)
+            result.bboxes_3d = box_type_3d(
+                bboxes_3d.tensor, origin=self.origin)
             result.labels_3d = labels_3d
             result.scores_3d = scores_3d
             result_list_3d.append(result)
