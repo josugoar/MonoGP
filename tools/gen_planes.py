@@ -16,24 +16,24 @@ SEGMENT_PLANE_KWARGS = {
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Generate planes from point clouds')
-    parser.add_argument(
-        '--root-path',
-        type=str,
-        default='./data/kitti',
-        help='specify the root path of dataset')
-    parser.add_argument(
-        '--testing', action='store_true', help='use testing set or not')
-    parser.add_argument(
-        '--image-ids',
-        type=int,
-        default=7481,
-        help='number of images to be processed')
-    parser.add_argument(
-        '--workers', type=int, default=8, help='number of threads to be used')
-    parser.add_argument(
-        '--not-show',
-        action='store_true',
-        help='do not show plane generation results')
+    parser.add_argument('--root-path',
+                        type=str,
+                        default='./data/kitti',
+                        help='specify the root path of dataset')
+    parser.add_argument('--testing',
+                        action='store_true',
+                        help='use testing set or not')
+    parser.add_argument('--image-ids',
+                        type=int,
+                        default=7481,
+                        help='number of images to be processed')
+    parser.add_argument('--workers',
+                        type=int,
+                        default=8,
+                        help='number of threads to be used')
+    parser.add_argument('--not-show',
+                        action='store_true',
+                        help='do not show plane generation results')
     args = parser.parse_args()
     return args
 
@@ -51,10 +51,14 @@ def get_kitti_plane_info(path,
         info = {}
         num_features = 4
 
-        velodyne_path = kitti.get_velodyne_path(
-            idx, path, training, relative_path=False)
-        calib_path = kitti.get_calib_path(
-            idx, path, training, relative_path=False)
+        velodyne_path = kitti.get_velodyne_path(idx,
+                                                path,
+                                                training,
+                                                relative_path=False)
+        calib_path = kitti.get_calib_path(idx,
+                                          path,
+                                          training,
+                                          relative_path=False)
         with open(calib_path, 'r') as f:
             lines = f.readlines()
         Tr_velo_to_cam = np.array([

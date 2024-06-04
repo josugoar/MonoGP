@@ -8,12 +8,13 @@ from mmdet3d.registry import TRANSFORMS
 class BBoxes3DToBBoxes(BaseTransform):
 
     def transform(self, input_dict: dict) -> dict:
-        gt_bboxes_3d = input_dict['gt_bboxes_3d']
+        bboxes_3d = input_dict['gt_bboxes_3d']
         cam2img = input_dict['cam2img']
 
-        gt_bboxes = box3d_to_bbox(gt_bboxes_3d, cam2img)
+        bboxes = bboxes_3d.tensor.new_tensor(
+            box3d_to_bbox(bboxes_3d.tensor.numpy(force=True), cam2img))
 
-        input_dict['gt_bboxes'] = gt_bboxes
+        input_dict['gt_bboxes'] = bboxes
 
         return input_dict
 

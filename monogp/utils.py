@@ -9,12 +9,7 @@ from mmdet3d.utils import array_converter
 
 
 @array_converter(apply_to=('centers_2d', 'cam2img', 'plane'))
-def points_img2plane(centers_2d: Union[np.ndarray, Tensor],
-                     cam2img: Union[np.ndarray, Tensor],
-                     plane: Union[np.ndarray, Tensor],
-                     shift_height: float,
-                     height: float,
-                     origin: Tuple[float, float, float]):
+def points_img2plane(centers_2d, cam2img, plane, shift_height, height, origin):
     # Arbitrary depth value representing the scale to a 3D plane in the camera
     # coordinate system. Careful with its magnitude, as a low value may cause
     # numerical instability
