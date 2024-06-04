@@ -1,4 +1,4 @@
-_base_ = './fcos3d_r101-caffe-dcn_fpn_head-gn_4xb3-4x_kitti-mono3d.py'
+_base_ = './fcos3d-bbox2d-kpts_r101-caffe-dcn_fpn_head-gn_4xb3-4x_kitti-mono3d.py'
 
 custom_imports = dict(imports=['projects.MonoGP.monogp'])
 
