@@ -231,8 +231,6 @@ class BoxAMDetectorWrapper(nn.Module):
                 box_type_3d=box_type_3d,
                 box_mode_3d=box_mode_3d)
             data = self.test_pipeline(data)
-            data['inputs'] = data['inputs']
-            data['data_samples'] = data['data_samples']
         data = pseudo_collate([data])
         self.input_data = data
 
