@@ -6,6 +6,12 @@ import open3d as o3d
 
 from tools.dataset_converters import kitti_data_utils as kitti
 
+SEGMENT_PLANE_KWARGS = {
+    'distance_threshold': 0.33,
+    'ransac_n': 3,
+    'num_iterations': 2000
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -16,7 +22,7 @@ def parse_args():
         default='./data/kitti',
         help='specify the root path of dataset')
     parser.add_argument(
-        '--testing', action='store_false', help='use testing set or not')
+        '--testing', action='store_true', help='use testing set or not')
     parser.add_argument(
         '--image-ids',
         type=int,
@@ -26,7 +32,7 @@ def parse_args():
         '--workers', type=int, default=8, help='number of threads to be used')
     parser.add_argument(
         '--not-show',
-        action='store_false',
+        action='store_true',
         help='do not show plane generation results')
     args = parser.parse_args()
     return args
@@ -36,11 +42,10 @@ def get_kitti_plane_info(path,
                          training=True,
                          image_ids=7481,
                          num_worker=8,
-                         show=True):
+                         show=True,
+                         **segment_plane_kwargs):
     if not isinstance(image_ids, list):
         image_ids = list(range(image_ids))
-
-    image_ids = image_ids[:3]
 
     def map_func(idx):
         info = {}
@@ -64,18 +69,18 @@ def get_kitti_plane_info(path,
         info['pcd_lidar'] = pcd_lidar
 
         pcd_cam = pcd_lidar.clone().transform(Tr_velo_to_cam)
-        plane, inliers = pcd_cam.segment_plane()
+        plane, inliers = pcd_cam.segment_plane(**segment_plane_kwargs)
         plane *= -1
         info['inliers'] = inliers
 
-        if not show:
-            plane_path = kitti.get_plane_path(
-                idx, path, training, relative_path=False)
-            with open(plane_path, 'w') as f:
-                print('# Matrix', file=f)
-                print('WIDTH 4', file=f)
-                print('HEIGHT 1', file=f)
-                print(' '.join(map('{:.2e}'.format, plane.numpy())), file=f)
+        # if not show:
+        #     plane_path = kitti.get_plane_path(
+        #         idx, path, training, relative_path=False)
+        #     with open(plane_path, 'w') as f:
+        #         print('# Matrix', file=f)
+        #         print('WIDTH 4', file=f)
+        #         print('HEIGHT 1', file=f)
+        #         print(' '.join(map('{:.2e}'.format, plane.numpy())), file=f)
 
         return info
 
@@ -100,7 +105,8 @@ def main():
                          training=not args.testing,
                          image_ids=args.image_ids,
                          num_worker=args.workers,
-                         show=not args.show)
+                         show=not args.not_show,
+                         **SEGMENT_PLANE_KWARGS)
 
 
 if __name__ == '__main__':
