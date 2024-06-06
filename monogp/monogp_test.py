@@ -10,15 +10,20 @@ from .utils import points_img2plane
 @MODELS.register_module()
 class MonoGpTest(Base3DDetector):
 
-    def __init__(self, *args, origin=(0.5, 1.0, 0.5), **kwargs):
-        super(MonoGpTest, self).__init__(*args, **kwargs)
+    def __init__(self,
+                 *args,
+                 pred_shift_height=False,
+                 origin=(0.5, 0.5, 0.5),
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pred_shift_height = pred_shift_height
         self.origin = origin
 
     def loss(self, batch_inputs, batch_data_samples):
         raise NotImplementedError
 
     def predict(self, batch_inputs, batch_data_samples):
-        result_list_3d = []
+        results = []
 
         for batch_data_sample in batch_data_samples:
             bboxes_3d = batch_data_sample.eval_ann_info['gt_bboxes_3d']
@@ -36,21 +41,28 @@ class MonoGpTest(Base3DDetector):
                 centers_2d = points_cam2img(bboxes_3d.bottom_center, cam2img)
             else:
                 raise ValueError(f'Unsupported origin {self.origin}')
-            shift_height = plane[3] - bboxes_3d.bottom_height
-            bboxes_3d.tensor[:, :3] = points_img2plane(centers_2d, cam2img,
-                                                       plane, shift_height,
-                                                       bboxes_3d.height,
-                                                       self.origin)
+            shift_height = 0
+            if self.pred_shift_height:
+                shift_height = plane[3] - bboxes_3d.bottom_height
+            bboxes_3d.tensor[:, :3] = points_img2plane(
+                centers_2d,
+                bboxes_3d.height,
+                cam2img,
+                plane,
+                shift_height,
+                origin=self.origin)
 
             result = InstanceData()
             result.bboxes_3d = box_type_3d(
-                bboxes_3d.tensor, origin=self.origin)
+                bboxes_3d.tensor,
+                box_dim=bboxes_3d.box_dim,
+                with_yaw=bboxes_3d.with_yaw,
+                origin=self.origin)
             result.labels_3d = labels_3d
             result.scores_3d = scores_3d
-            result_list_3d.append(result)
+            results.append(result)
 
-        predictions = self.add_pred_to_datasample(batch_data_samples,
-                                                  result_list_3d)
+        predictions = self.add_pred_to_datasample(batch_data_samples, results)
 
         return predictions
 
