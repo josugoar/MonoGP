@@ -1,5 +1,13 @@
 _base_ = 'mmdet3d::smoke/smoke_dla34_dlaneck_gn-all_4xb8-6x_kitti-mono3d.py'
 
+custom_imports = dict(imports=['projects.MonoGP.monogp'])
+
+# model settings
+model = dict(
+    bbox_head=dict(
+        type='MonoGpSMOKEMono3DHead', bbox_coder=dict(
+            type='MonoGpSMOKECoder')))
+
 train_dataloader = dict(batch_size=8, num_workers=4)
 val_dataloader = dict(batch_size=8, num_workers=4)
 
