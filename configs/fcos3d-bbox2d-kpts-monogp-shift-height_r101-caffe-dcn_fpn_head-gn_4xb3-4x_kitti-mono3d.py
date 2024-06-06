@@ -1,19 +1,28 @@
 _base_ = './fcos3d-bbox2d-kpts_r101-caffe-dcn_fpn_head-gn_4xb3-4x_kitti-mono3d.py'  # noqa: E501
 
-custom_imports = dict(imports=['projects.MonoGP.monogp'])
-
 # model settings
 model = dict(
     bbox_head=dict(
-        type='MonoGpFCOS3DMono3DHead',
+        bbox_code_size=8,
+        group_reg_dims=(
+            2, 1, 3, 1, 16, 4,
+            1),  # offset, depth, size, rot, kpts, bbox2d, shift_height
         reg_branch=(
             (256, ),  # offset
             (),  # depth
             (256, ),  # size
             (256, ),  # rot
+            (256, ),  # kpts
+            (256, ),  # bbox2d
+            (256, )  # shift_height
         ),
-        bbox_coder=dict(
-            type='MonoGpFCOS3DBBoxCoder', base_depths=((1.0, 0.0), ))))
+        use_ground_plane=True,
+        pred_shift_height=True,
+        bbox_coder=dict(code_size=8)),
+    train_cfg=dict(code_weight=[
+        1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+        0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 1.0, 1.0, 1.0, 1.0, 1.0
+    ]))
 
 backend_args = None
 
@@ -40,6 +49,8 @@ train_pipeline = [
         with_bbox_depth=True),
     dict(type='Resize3D', scale=(1242, 375), keep_ratio=True),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
+    dict(type='BBoxes3DToBBoxes'),
+    dict(type='ObjectShiftHeight'),
     dict(
         type='Pack3DDetInputs',
         keys=[
@@ -57,18 +68,3 @@ test_pipeline = [
 train_dataloader = dict(dataset=dict(pipeline=train_pipeline))
 test_dataloader = dict(dataset=dict(pipeline=test_pipeline))
 val_dataloader = dict(dataset=dict(pipeline=test_pipeline))
-
-val_evaluator = [
-    dict(
-        type='KittiMetric',
-        ann_file=_base_.data_root + 'kitti_infos_val.pkl',
-        metric='bbox',
-        backend_args=backend_args),
-    dict(
-        type='XKittiMetric',
-        ann_file=_base_.data_root + 'kitti_infos_val.pkl',
-        metric='bbox',
-        prefix='XKitti metric',
-        backend_args=backend_args)
-]
-test_evaluator = val_evaluator

@@ -1,19 +1,19 @@
 _base_ = './smoke_dla34_dlaneck_gn-all_4xb8-6x_kitti-mono3d.py'
 
-custom_imports = dict(imports=['projects.MonoGP.monogp'])
-
 # model settings
 model = dict(
     bbox_head=dict(
-        type='MonoGpSMOKEMono3DHead',
-        pred_shift_height=False,
+        group_reg_dims=(2, 1, 3, 1,
+                        1),  # offset, depth, size, rot, shift_height
         reg_branch=(
             (256, ),  # offset
             (),  # depth
             (256, ),  # size
             (256, ),  # rot
+            (256, )  # shift_height
         ),
-        bbox_coder=dict(type='MonoGpSMOKECoder', base_depth=(1.0, 0.0))))
+        use_ground_plane=True,
+        pred_shift_height=True))
 
 backend_args = None
 
@@ -58,18 +58,3 @@ test_pipeline = [
 train_dataloader = dict(dataset=dict(pipeline=train_pipeline))
 test_dataloader = dict(dataset=dict(pipeline=test_pipeline))
 val_dataloader = dict(dataset=dict(pipeline=test_pipeline))
-
-val_evaluator = [
-    dict(
-        type='KittiMetric',
-        ann_file=_base_.data_root + 'kitti_infos_val.pkl',
-        metric='bbox',
-        backend_args=backend_args),
-    dict(
-        type='XKittiMetric',
-        ann_file=_base_.data_root + 'kitti_infos_val.pkl',
-        metric='bbox',
-        prefix='XKitti metric',
-        backend_args=backend_args)
-]
-test_evaluator = val_evaluator
