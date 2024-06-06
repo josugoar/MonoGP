@@ -5,41 +5,38 @@ from torch import Tensor
 
 from mmdet3d.models.task_modules import SMOKECoder
 from mmdet3d.registry import TASK_UTILS
+from .utils import points_img2plane
 
 
 @TASK_UTILS.register_module()
 class MonoGpSMOKECoder(SMOKECoder):
 
-    def __init__(self, base_shift_height: Tuple[float],
-                 base_depth: Tuple[float], base_dims: Tuple[float],
-                 code_size: int):
-        super(MonoGpSMOKECoder, self).__init__(base_depth, base_dims,
-                                               code_size)
-        self.base_shift_height = base_shift_height
-
     def decode(self,
                reg: Tensor,
                points: Tensor,
                labels: Tensor,
-               planes: Tensor,
                cam2imgs: Tensor,
+               planes: Tensor,
                trans_mats: Tensor,
+               use_ground_plane: bool,
                pred_shift_height: bool,
+               origin: Tuple[float, float, float],
                locations: Optional[Tensor] = None) -> Tuple[Tensor]:
-        # TODO
-        shift_height_offsets = reg[:, 0]
+        depth_offsets = reg[:, 0]
         centers2d_offsets = reg[:, 1:3]
         dimensions_offsets = reg[:, 3:6]
         orientations = reg[:, 6:8]
+        shift_heights = 0
         if pred_shift_height:
-            shift_heights = self._decode_shift_height(shift_height_offsets)
-        else:
-            shift_heights = torch.zeros_like(shift_height_offsets)
-        depths = self._decode_depth(...)
+            shift_heights = reg[:, 8]
+        depths = self._decode_depth(depth_offsets)
+        pred_dimensions = self._decode_dimension(labels, dimensions_offsets)
         # get the 3D Bounding box's center location.
         pred_locations = self._decode_location(points, centers2d_offsets,
-                                               depths, cam2imgs, trans_mats)
-        pred_dimensions = self._decode_dimension(labels, dimensions_offsets)
+                                               pred_dimensions, depths,
+                                               shift_heights, cam2imgs, planes,
+                                               trans_mats, use_ground_plane,
+                                               pred_shift_height, origin)
         if locations is None:
             pred_orientations = self._decode_orientation(
                 orientations, pred_locations)
@@ -49,23 +46,31 @@ class MonoGpSMOKECoder(SMOKECoder):
 
         return pred_locations, pred_dimensions, pred_orientations
 
-    def _decode_shift_height(self, shift_height_offsets: Tensor) -> Tensor:
-        base_shift_height = shift_height_offsets.new_tensor(
-            self.base_shift_height)
-        depths = shift_height_offsets * base_shift_height[
-            1] + base_shift_height[0]
-
-        return depths
-
-    def _decode_depth(self, depth_offsets: Tensor) -> Tensor:
-        base_depth = depth_offsets.new_tensor(self.base_depth)
-        depths = depth_offsets * base_depth[1] + base_depth[0]
-
-        return depths
-
     def _decode_location(self, points: Tensor, centers2d_offsets: Tensor,
-                         depths: Tensor, cam2imgs: Tensor,
-                         trans_mats: Tensor) -> Tensor:
+                         dimensions: Tensor, depths: Tensor,
+                         shift_heights: Tensor, cam2imgs: Tensor,
+                         planes: Tensor, trans_mats: Tensor,
+                         use_ground_plane: bool, pred_shift_height: bool,
+                         origin: Tuple[float, float, float]) -> Tensor:
+        if use_ground_plane:
+            # number of points
+            N = centers2d_offsets.shape[0]
+            # batch_size
+            N_batch = cam2imgs.shape[0]
+            batch_id = torch.arange(N_batch).unsqueeze(1)
+            obj_id = batch_id.repeat(1, N // N_batch).flatten()
+            cam2imgs = cam2imgs[obj_id]
+            centers2d = points + centers2d_offsets
+            locations = points_img2plane(
+                centers2d,
+                dimensions[:, 1],
+                cam2imgs,
+                planes,
+                shift_heights,
+                origin=origin)
+
+            return locations
+
         # number of points
         N = centers2d_offsets.shape[0]
         # batch_size

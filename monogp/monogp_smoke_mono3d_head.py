@@ -17,12 +17,14 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
 
     def __init__(self,
                  *args,
+                 use_ground_plane: bool = False,
+                 pred_shift_height: bool = False,
                  origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
-                 pred_shift_height: bool = True,
                  **kwargs) -> None:
-        super(MonoGpSMOKEMono3DHead, self).__init__(*args, **kwargs)
-        self.origin = origin
+        super().__init__(*args, **kwargs)
+        self.use_ground_plane = use_ground_plane
         self.pred_shift_height = pred_shift_height
+        self.origin = origin
 
     def predict_by_feat(self,
                         cls_scores: List[Tensor],
@@ -30,12 +32,12 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
                         batch_img_metas: Optional[List[dict]] = None,
                         rescale: bool = None) -> InstanceList:
         assert len(cls_scores) == len(bbox_preds) == 1
-        planes = torch.stack([
-            cls_scores[0].new_tensor(img_meta['plane'])
-            for img_meta in batch_img_metas
-        ])
         cam2imgs = torch.stack([
             cls_scores[0].new_tensor(img_meta['cam2img'])
+            for img_meta in batch_img_metas
+        ])
+        planes = torch.stack([
+            cls_scores[0].new_tensor(img_meta['plane'])
             for img_meta in batch_img_metas
         ])
         trans_mats = torch.stack([
@@ -46,8 +48,8 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
             cls_scores[0],
             bbox_preds[0],
             batch_img_metas,
-            planes=planes,
             cam2imgs=cam2imgs,
+            planes=planes,
             trans_mats=trans_mats,
             topk=100,
             kernel=3)
@@ -84,8 +86,8 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
                         cls_score: Tensor,
                         reg_pred: Tensor,
                         batch_img_metas: List[dict],
-                        planes: Tensor,
                         cam2imgs: Tensor,
+                        planes: Tensor,
                         trans_mats: Tensor,
                         topk: int = 100,
                         kernel: int = 3) -> Tuple[Tensor, Tensor, Tensor]:
@@ -104,8 +106,9 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
                             topk_ys.view(-1, 1).float()],
                            dim=1)
         locations, dimensions, orientations = self.bbox_coder.decode(
-            regression, points, batch_topk_labels, planes, cam2imgs,
-            trans_mats, self.pred_shift_height)
+            regression, points, batch_topk_labels, cam2imgs, planes,
+            trans_mats, self.use_ground_plane, self.pred_shift_height,
+            self.origin)
 
         batch_bboxes = torch.cat((locations, dimensions, orientations), dim=1)
         batch_bboxes = batch_bboxes.view(batch, -1, self.bbox_code_size)
@@ -117,12 +120,12 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
                         batch_img_metas: List[dict], pred_reg: Tensor) -> dict:
         batch, channel = pred_reg.shape[0], pred_reg.shape[1]
         w = pred_reg.shape[3]
-        planes = torch.stack([
-            gt_locations.new_tensor(img_meta['plane'])
-            for img_meta in batch_img_metas
-        ])
         cam2imgs = torch.stack([
             gt_locations.new_tensor(img_meta['cam2img'])
+            for img_meta in batch_img_metas
+        ])
+        planes = torch.stack([
+            gt_locations.new_tensor(img_meta['plane'])
             for img_meta in batch_img_metas
         ])
         trans_mats = torch.stack([
@@ -134,8 +137,9 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
         pred_regression = transpose_and_gather_feat(pred_reg, centers_2d_inds)
         pred_regression_pois = pred_regression.view(-1, channel)
         locations, dimensions, orientations = self.bbox_coder.decode(
-            pred_regression_pois, centers_2d, labels_3d, planes, cam2imgs,
-            trans_mats, self.pred_shift_height, gt_locations)
+            pred_regression_pois, centers_2d, labels_3d, cam2imgs, planes,
+            trans_mats, self.use_ground_plane, self.pred_shift_height,
+            self.origin, gt_locations)
 
         locations, dimensions, orientations = locations[indices], dimensions[
             indices], orientations[indices]
