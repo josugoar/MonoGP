@@ -1,72 +1,54 @@
-from typing import Optional, Tuple
-
+import torch
 from torch import Tensor
+from torch.nn import functional as F
 
-from mmdet3d.models.task_modules import FCOS3DBBoxCoder
+from mmdet3d.models.task_modules import PGDBBoxCoder
 from mmdet3d.registry import TASK_UTILS
 
 
 @TASK_UTILS.register_module()
-class MonoGpFCOS3DBBoxCoder(FCOS3DBBoxCoder):
+class MonoGpFCOS3DBBoxCoder(PGDBBoxCoder):
 
-    def __init__(self,
-                 base_depths: Optional[Tuple[Tuple[float]]] = None,
-                 base_dims: Optional[Tuple[Tuple[float]]] = None,
-                 code_size: int = 7,
-                 norm_on_bbox: bool = True) -> None:
-        super(MonoGpFCOS3DBBoxCoder, self).__init__()
-        self.base_depths = base_depths
-        self.base_dims = base_dims
-        self.bbox_code_size = code_size
-        self.norm_on_bbox = norm_on_bbox
-
-    def decode(self,
-               bbox: Tensor,
-               scale: tuple,
-               stride: int,
-               training: bool,
-               cls_score: Optional[Tensor] = None) -> Tensor:
-        # scale the bbox of different level
-        # only apply to offset, depth and size prediction
-        scale_offset, scale_depth, scale_size = scale[0:3]
-
+    def decode_2d(self,
+                  bbox: Tensor,
+                  scale: tuple,
+                  stride: int,
+                  max_regress_range: int,
+                  training: bool,
+                  pred_shift_height: bool = False,
+                  pred_keypoints: bool = False,
+                  pred_bbox2d: bool = True) -> Tensor:
         clone_bbox = bbox.clone()
-        bbox[:, :2] = scale_offset(clone_bbox[:, :2]).float()
-        bbox[:, 2] = scale_depth(clone_bbox[:, 2]).float()
-        bbox[:, 3:6] = scale_size(clone_bbox[:, 3:6]).float()
+        if pred_shift_height:
+            scale_shift_height = scale[3]
+            bbox[:, self.bbox_code_size - 1] = scale_shift_height(
+                clone_bbox[:, self.bbox_code_size - 1]).float()
 
-        if self.base_depths is None:
-            bbox[:, 2] = bbox[:, 2].exp()
-        elif len(self.base_depths) == 1:  # only single prior
-            mean = self.base_depths[0][0]
-            std = self.base_depths[0][1]
-            bbox[:, 2] = mean + bbox.clone()[:, 2] * std
-        else:  # multi-class priors
-            assert len(self.base_depths) == cls_score.shape[1], \
-                'The number of multi-class depth priors should be equal to ' \
-                'the number of categories.'
-            indices = cls_score.max(dim=1)[1]
-            depth_priors = cls_score.new_tensor(
-                self.base_depths)[indices, :].permute(0, 3, 1, 2)
-            mean = depth_priors[:, 0]
-            std = depth_priors[:, 1]
-            bbox[:, 2] = mean + bbox.clone()[:, 2] * std
+        if pred_keypoints:
+            scale_kpts = scale[3]
+            if pred_shift_height:
+                scale_kpts = scale[4]
+            # 2 dimension of offsets x 8 corners of a 3D bbox
+            bbox[:, self.bbox_code_size:self.bbox_code_size + 16] = \
+                torch.tanh(scale_kpts(clone_bbox[
+                    :, self.bbox_code_size:self.bbox_code_size + 16]).float())
 
-        bbox[:, 3:6] = bbox[:, 3:6].exp()
-        if self.base_dims is not None:
-            assert len(self.base_dims) == cls_score.shape[1], \
-                'The number of anchor sizes should be equal to the number ' \
-                'of categories.'
-            indices = cls_score.max(dim=1)[1]
-            size_priors = cls_score.new_tensor(
-                self.base_dims)[indices, :].permute(0, 3, 1, 2)
-            bbox[:, 3:6] = size_priors * bbox.clone()[:, 3:6]
+        if pred_bbox2d:
+            scale_bbox2d = scale[-1]
+            # The last four dimensions are offsets to four sides of a 2D bbox
+            bbox[:, -4:] = scale_bbox2d(clone_bbox[:, -4:]).float()
 
-        assert self.norm_on_bbox is True, 'Setting norm_on_bbox to False '\
-            'has not been thoroughly tested for FCOS3D.'
         if self.norm_on_bbox:
+            if pred_bbox2d:
+                bbox[:, -4:] = F.relu(bbox.clone()[:, -4:])
             if not training:
-                # Note that this line is conducted only when testing
-                bbox[:, :2] *= stride
-
+                if pred_keypoints:
+                    bbox[
+                        :, self.bbox_code_size:self.bbox_code_size + 16] *= \
+                           max_regress_range
+                if pred_bbox2d:
+                    bbox[:, -4:] *= stride
+        else:
+            if pred_bbox2d:
+                bbox[:, -4:] = bbox.clone()[:, -4:].exp()
         return bbox
