@@ -29,10 +29,10 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                  pred_shift_height: bool = False,
                  origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
                  **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.use_ground_plane = use_ground_plane
         self.pred_shift_height = pred_shift_height
+        self.use_ground_plane = use_ground_plane
         self.origin = origin
+        super().__init__(*args, **kwargs)
         if self.pred_shift_height and self.pred_keypoints:
             self.kpts_start += 1
 
@@ -101,7 +101,8 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                         pos_cls_scores: Optional[Tensor] = None,
                         with_kpts: bool = False) -> Tuple[Tensor]:
         views = [np.array(img_meta['cam2img']) for img_meta in batch_img_metas]
-        planes = [img_meta['plane'] for img_meta in batch_img_metas]
+        if self.use_ground_plane:
+            planes = [img_meta['plane'] for img_meta in batch_img_metas]
         num_imgs = len(batch_img_metas)
         img_idx = []
         for label in labels_3d:
@@ -176,7 +177,8 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
             view_shape = views[idx].shape
             cam2img[:view_shape[0], :view_shape[1]] = \
                 pos_strided_bbox_preds.new_tensor(views[idx])
-            plane = planes[idx]
+            if self.use_ground_plane:
+                plane = planes[idx]
 
             centers2d_preds = pos_strided_bbox_preds.clone()[mask, :2]
             centers2d_targets = pos_bbox_targets_3d.clone()[mask, :2]
@@ -200,16 +202,13 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                 cam2img[0, 0]) + pos_bbox_targets_3d[mask, 6]
 
             if self.use_ground_plane:
-                if self.pred_shift_height:
-                    shift_height = pos_strided_bbox_preds[mask, -1]
-                else:
-                    shift_height = 0
                 pos_strided_bbox_preds[mask, :3] = points_img2plane(
                     centers2d_preds,
                     pos_strided_bbox_preds[mask, 4],
                     cam2img,
                     plane,
-                    shift_height,
+                    pos_strided_bbox_preds[mask, self.bbox_code_size -
+                                           1] if self.pred_shift_height else 0,
                     origin=self.origin)
 
             # depth fixed when computing re-project 3D bboxes
@@ -494,7 +493,8 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                                 cfg: ConfigType,
                                 rescale: bool = False) -> InstanceData:
         view = np.array(img_meta['cam2img'])
-        plane = img_meta['plane']
+        if self.use_ground_plane:
+            plane = img_meta['plane']
         scale_factor = img_meta['scale_factor']
         cfg = self.test_cfg if cfg is None else cfg
         assert len(cls_score_list) == len(bbox_pred_list) == len(mlvl_points)
@@ -604,16 +604,13 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                                                  self.dir_offset, cam2img)
 
         if self.use_ground_plane:
-            if self.pred_shift_height:
-                shift_height = mlvl_bboxes[:, -1]
-            else:
-                shift_height = 0
             mlvl_bboxes[:, :3] = points_img2plane(
                 mlvl_centers2d,
                 mlvl_bboxes[:, 4],
                 cam2img,
                 plane,
-                shift_height,
+                mlvl_bboxes[:, self.bbox_code_size -
+                            1] if self.pred_shift_height else 0,
                 origin=self.origin)
 
         mlvl_bboxes_for_nms = xywhr2xyxyr(img_meta['box_type_3d'](
