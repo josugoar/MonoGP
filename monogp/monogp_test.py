@@ -41,9 +41,11 @@ class MonoGpTest(Base3DDetector):
                 centers_2d = points_cam2img(bboxes_3d.bottom_center, cam2img)
             else:
                 raise ValueError(f'Unsupported origin {self.origin}')
+
             shift_height = 0
             if self.pred_shift_height:
                 shift_height = plane[3] - bboxes_3d.bottom_height
+
             bboxes_3d.tensor[:, :3] = points_img2plane(
                 centers_2d,
                 bboxes_3d.height,
