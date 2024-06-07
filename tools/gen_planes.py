@@ -73,14 +73,14 @@ def get_kitti_plane_info(path,
         plane *= -1
         info['inliers'] = inliers
 
-        # if not show:
-        #     plane_path = kitti.get_plane_path(
-        #         idx, path, training, relative_path=False)
-        #     with open(plane_path, 'w') as f:
-        #         print('# Matrix', file=f)
-        #         print('WIDTH 4', file=f)
-        #         print('HEIGHT 1', file=f)
-        #         print(' '.join(map('{:.2e}'.format, plane.numpy())), file=f)
+        if not show:
+            plane_path = kitti.get_plane_path(
+                idx, path, training, relative_path=False)
+            with open(plane_path, 'w') as f:
+                print('# Matrix', file=f)
+                print('WIDTH 4', file=f)
+                print('HEIGHT 1', file=f)
+                print(' '.join(map('{:.2e}'.format, plane.numpy())), file=f)
 
         return info
 
