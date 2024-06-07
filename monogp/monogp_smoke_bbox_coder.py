@@ -16,11 +16,11 @@ class MonoGpSMOKECoder(SMOKECoder):
                points: Tensor,
                labels: Tensor,
                cam2imgs: Tensor,
-               planes: Tensor,
                trans_mats: Tensor,
-               use_ground_plane: bool,
-               pred_shift_height: bool,
-               origin: Tuple[float, float, float],
+               planes: Optional[Tensor] = None,
+               use_ground_plane: bool = False,
+               pred_shift_height: bool = False,
+               origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
                locations: Optional[Tensor] = None) -> Tuple[Tensor]:
         depth_offsets = reg[:, 0]
         centers2d_offsets = reg[:, 1:3]
@@ -34,8 +34,9 @@ class MonoGpSMOKECoder(SMOKECoder):
         # get the 3D Bounding box's center location.
         pred_locations = self._decode_location(points, centers2d_offsets,
                                                pred_dimensions, depths,
-                                               shift_heights, cam2imgs, planes,
-                                               trans_mats, use_ground_plane,
+                                               shift_heights, cam2imgs,
+                                               trans_mats, planes,
+                                               use_ground_plane,
                                                pred_shift_height, origin)
         if locations is None:
             pred_orientations = self._decode_orientation(
@@ -49,7 +50,7 @@ class MonoGpSMOKECoder(SMOKECoder):
     def _decode_location(self, points: Tensor, centers2d_offsets: Tensor,
                          dimensions: Tensor, depths: Tensor,
                          shift_heights: Tensor, cam2imgs: Tensor,
-                         planes: Tensor, trans_mats: Tensor,
+                         trans_mats: Tensor, planes: Optional[Tensor],
                          use_ground_plane: bool, pred_shift_height: bool,
                          origin: Tuple[float, float, float]) -> Tensor:
         if use_ground_plane:
