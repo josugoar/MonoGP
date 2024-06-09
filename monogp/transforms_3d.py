@@ -12,8 +12,7 @@ class BBoxes3DToBBoxes(BaseTransform):
         bboxes_3d = input_dict['gt_bboxes_3d']
         cam2img = input_dict['cam2img']
 
-        bboxes = bboxes_3d.tensor.new_tensor(
-            box3d_to_bbox(bboxes_3d.tensor.numpy(force=True), cam2img))
+        bboxes = box3d_to_bbox(bboxes_3d.tensor.numpy(force=True), cam2img)
 
         input_dict['gt_bboxes'] = bboxes
 
@@ -28,7 +27,8 @@ class BottomCenterToCenters2DWithDepth(BaseTransform):
         cam2img = input_dict['cam2img']
 
         centers_2d_with_depth = points_cam2img(
-            bboxes_3d.bottom_center, cam2img, with_depth=True)
+            bboxes_3d.bottom_center, cam2img,
+            with_depth=True).numpy(force=True)
 
         input_dict['centers_2d'] = centers_2d_with_depth[:, :2]
         input_dict['depths'] = centers_2d_with_depth[:, 2]
