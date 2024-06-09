@@ -13,7 +13,7 @@ def points_img2plane(centers_2d,
                      plane,
                      shift_height=0,
                      origin=(0.5, 0.5, 0.5)):
-    shift_height += height * (1.0 - origin[1])
+    shift_height = shift_height + height * (1.0 - origin[1])
 
     num_points = centers_2d.shape[0]
     depths = centers_2d.new_full((num_points, 1), DEPTH)
