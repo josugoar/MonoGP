@@ -17,8 +17,6 @@ from mmdet3d.structures import points_cam2img, points_img2cam, xywhr2xyxyr
 from mmdet3d.utils import ConfigType, InstanceList, OptInstanceList
 from .utils import points_img2plane
 
-INF = 1e8
-
 
 @MODELS.register_module()
 class MonoGpFCOS3DMono3DHead(PGDHead):
@@ -201,14 +199,18 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                 centers2d_targets[:, 0] - cam2img[0, 2],
                 cam2img[0, 0]) + pos_bbox_targets_3d[mask, 6]
 
+            shift_height = 0
+            if self.pred_shift_height:
+                shift_height = pos_strided_bbox_preds[mask,
+                                                      self.bbox_code_size - 1]
+
             if self.use_ground_plane:
                 pos_strided_bbox_preds[mask, :3] = points_img2plane(
                     centers2d_preds,
                     pos_strided_bbox_preds[mask, 4],
                     cam2img,
                     plane,
-                    pos_strided_bbox_preds[mask, self.bbox_code_size -
-                                           1] if self.pred_shift_height else 0,
+                    shift_height,
                     origin=self.origin)
 
             # depth fixed when computing re-project 3D bboxes
@@ -563,10 +565,10 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                     bbox_pred2d = bbox_pred2d[topk_inds, :]
             # change the offset to actual center predictions
             bbox_pred3d[:, :2] = points - bbox_pred3d[:, :2]
-            # TODO
             if rescale:
-                if self.pred_bbox2d:
-                    bbox_pred2d /= bbox_pred2d.new_tensor(scale_factor[0])
+                bbox_pred3d[:, :2] /= bbox_pred3d[:, :2].new_tensor(
+                    scale_factor[0])
+                bbox_pred3d[:, 2] *= scale_factor[0]
             if self.use_depth_classifier:
                 prob_depth_pred = self.bbox_coder.decode_prob_depth(
                     depth_cls_pred, self.depth_range, self.depth_unit,
@@ -587,6 +589,8 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
             if self.pred_bbox2d:
                 bbox_pred2d = distance2bbox(
                     points, bbox_pred2d, max_shape=img_meta['img_shape'])
+                if rescale:
+                    bbox_pred2d /= bbox_pred2d.new_tensor(scale_factor[0])
                 mlvl_bboxes2d.append(bbox_pred2d)
 
         mlvl_centers2d = torch.cat(mlvl_centers2d)
@@ -604,14 +608,17 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                                                  mlvl_dir_scores,
                                                  self.dir_offset, cam2img)
 
+        shift_height = 0
+        if self.pred_shift_height:
+            shift_height = mlvl_bboxes[:, self.bbox_code_size - 1]
+
         if self.use_ground_plane:
             mlvl_bboxes[:, :3] = points_img2plane(
                 mlvl_centers2d,
                 mlvl_bboxes[:, 4],
                 cam2img,
                 plane,
-                mlvl_bboxes[:, self.bbox_code_size -
-                            1] if self.pred_shift_height else 0,
+                shift_height,
                 origin=self.origin)
 
         mlvl_bboxes_for_nms = xywhr2xyxyr(img_meta['box_type_3d'](
