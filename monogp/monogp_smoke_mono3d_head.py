@@ -93,7 +93,8 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
                         planes: Optional[Tensor],
                         topk: int = 100,
                         kernel: int = 3) -> Tuple[Tensor, Tensor, Tensor]:
-        batch, channel = reg_pred.shape[0], reg_pred.shape[1]
+        img_h, img_w = batch_img_metas[0]['pad_shape'][:2]
+        bs, cs, feat_h, feat_w = reg_pred.shape
 
         center_heatmap_pred = get_local_maximum(cls_score, kernel=kernel)
 
@@ -102,7 +103,7 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
         batch_scores, batch_index, batch_topk_labels = batch_dets
 
         regression = transpose_and_gather_feat(reg_pred, batch_index)
-        regression = regression.view(-1, channel)
+        regression = regression.view(-1, cs)
 
         points = torch.cat([topk_xs.view(-1, 1),
                             topk_ys.view(-1, 1).float()],
@@ -112,7 +113,7 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
             planes, self.use_ground_plane, self.pred_shift_height, self.origin)
 
         batch_bboxes = torch.cat((locations, dimensions, orientations), dim=1)
-        batch_bboxes = batch_bboxes.view(batch, -1, self.bbox_code_size)
+        batch_bboxes = batch_bboxes.view(bs, -1, self.bbox_code_size)
         return batch_bboxes, batch_scores, batch_topk_labels
 
     def get_predictions(self, labels_3d: Tensor, centers_2d: Tensor,
