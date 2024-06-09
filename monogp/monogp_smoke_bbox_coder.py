@@ -71,7 +71,7 @@ class MonoGpSMOKECoder(SMOKECoder):
                 shift_heights,
                 origin=origin)
         else:
-            trans_mats_inv = trans_mats.inverse
+            trans_mats_inv = trans_mats.inverse()
             cam2imgs_inv = cam2imgs.inverse()
             centers2d_extend = torch.cat((centers2d, centers2d.new_ones(N, 1)),
                                          dim=1)
