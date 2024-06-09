@@ -61,7 +61,7 @@ train_pipeline = [
 ]
 test_pipeline = [
     dict(type='LoadImageFromFileMono3D', backend_args=backend_args),
-    dict(type='Resize3D', scale=(1242, 375), keep_ratio=True),
+    dict(type='mmdet.Resize', scale_factor=1.0),
     dict(type='Pack3DDetInputs', keys=['img'], meta_keys=meta_keys)
 ]
 
