@@ -39,6 +39,9 @@ class MonoGpFCOS3DBBoxCoder(PGDBBoxCoder):
             bbox[:, -4:] = scale_bbox2d(clone_bbox[:, -4:]).float()
 
         if self.norm_on_bbox:
+            if pred_shift_height:
+                bbox[:, self.bbox_code_size - 1] = F.relu(
+                    bbox.clone()[:, self.bbox_code_size - 1])
             if pred_bbox2d:
                 bbox[:, -4:] = F.relu(bbox.clone()[:, -4:])
             if not training:
@@ -49,6 +52,9 @@ class MonoGpFCOS3DBBoxCoder(PGDBBoxCoder):
                 if pred_bbox2d:
                     bbox[:, -4:] *= stride
         else:
+            if pred_shift_height:
+                bbox[:, self.bbox_code_size -
+                     1] = bbox.clone()[:, self.bbox_code_size - 1].exp()
             if pred_bbox2d:
                 bbox[:, -4:] = bbox.clone()[:, -4:].exp()
         return bbox
