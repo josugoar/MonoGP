@@ -1,4 +1,3 @@
-import itertools
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -50,12 +49,11 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
 
         if self.pred_shift_height:
             bbox_pred = torch.cat([
-                bbox_pred[:, :self.bbox_code_size - 1], bbox_pred[:, -1],
+                bbox_pred[:, :self.bbox_code_size - 1], bbox_pred[:, -1:],
                 bbox_pred[:, self.bbox_code_size - 1:-1]
             ],
                                   dim=1)
-            scale = itertools.chain.from_iterable(scale[:3], scale[-1:],
-                                                  scale[3:])
+            scale = scale[:3] + scale[-1:] + scale[3:]
 
         max_regress_range = stride * self.regress_ranges[0][1] / \
             self.strides[0]
@@ -325,10 +323,10 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
             if code_weight:
                 assert len(code_weight) == sum(self.group_reg_dims)
                 if self.pred_shift_height:
-                    code_weight = itertools.chain.from_iterable(
-                        code_weight[:self.bbox_code_size - 1],
-                        code_weight[-1:],
-                        code_weight[self.bbox_code_size - 1:])
+                    code_weight = code_weight[:self.bbox_code_size -
+                                              1] + code_weight[
+                                                  -1:] + code_weight[
+                                                      self.bbox_code_size - 1:]
                 bbox_weights = bbox_weights * bbox_weights.new_tensor(
                     code_weight)
 
