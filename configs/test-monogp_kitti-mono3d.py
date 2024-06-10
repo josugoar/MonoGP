@@ -8,6 +8,8 @@ custom_imports = dict(imports=['projects.MonoGP.monogp'])
 
 model = dict(type='MonoGpTest')
 
+backend_args = None
+
 meta_keys = [
     'img_path', 'ori_shape', 'img_shape', 'lidar2img', 'depth2img', 'cam2img',
     'pad_shape', 'scale_factor', 'flip', 'pcd_horizontal_flip',
@@ -20,8 +22,8 @@ meta_keys = [
     'num_views', 'ego2global', 'axis_align_matrix', 'plane'
 ]
 test_pipeline = [
-    dict(type='LoadImageFromFileMono3D'),
-    dict(type='Resize3D', scale=(1242, 375), keep_ratio=True),
+    dict(type='LoadImageFromFileMono3D', backend_args=backend_args),
+    dict(type='mmdet.Resize', scale_factor=1.0),
     dict(
         type='Pack3DDetInputs',
         keys=[
@@ -32,3 +34,18 @@ test_pipeline = [
 ]
 
 test_dataloader = dict(dataset=dict(pipeline=test_pipeline))
+
+val_evaluator = [
+    dict(
+        type='KittiMetric',
+        ann_file=_base_.data_root + 'kitti_infos_val.pkl',
+        metric='bbox',
+        backend_args=backend_args),
+    dict(
+        type='GroundPlaneKittiMetric',
+        ann_file=_base_.data_root + 'kitti_infos_val.pkl',
+        metric='bbox',
+        prefix='Ground plane Kitti metric',
+        backend_args=backend_args)
+]
+test_evaluator = val_evaluator
