@@ -66,7 +66,8 @@ class ObjectShiftHeight(BaseTransform):
 
         shift_height = plane[3] - bboxes_3d.bottom_height
         bboxes_3d = box_type_3d(
-            torch.cat([bboxes_3d.tensor, shift_height], dim=1),
+            torch.cat(
+                [bboxes_3d.tensor, shift_height.unsqueeze(1)], dim=1),
             box_dim=bboxes_3d.box_dim + 1,
             with_yaw=bboxes_3d.with_yaw)
 
