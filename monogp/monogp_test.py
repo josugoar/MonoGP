@@ -1,9 +1,13 @@
+from typing import Tuple, Union
+
 import torch
 from mmengine.structures import InstanceData
+from torch import Tensor
 
 from mmdet3d.models import Base3DDetector
 from mmdet3d.registry import MODELS
 from mmdet3d.structures import points_cam2img
+from mmdet3d.structures.det3d_data_sample import OptSampleList, SampleList
 from .utils import points_img2plane
 
 EPSILON = 1e-4
@@ -14,17 +18,19 @@ class MonoGpTest(Base3DDetector):
 
     def __init__(self,
                  *args,
-                 pred_shift_height=True,
-                 origin=(0.5, 0.5, 0.5),
+                 pred_shift_height: bool = False,
+                 origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
                  **kwargs):
         self.pred_shift_height = pred_shift_height
         self.origin = origin
         super().__init__(*args, **kwargs)
 
-    def loss(self, batch_inputs, batch_data_samples):
+    def loss(self, batch_inputs: Tensor,
+             batch_data_samples: SampleList) -> Union[dict, tuple]:
         raise NotImplementedError
 
-    def predict(self, batch_inputs, batch_data_samples):
+    def predict(self, batch_inputs: Tensor,
+                batch_data_samples: SampleList) -> SampleList:
         results = []
 
         for batch_data_sample in batch_data_samples:
@@ -38,12 +44,10 @@ class MonoGpTest(Base3DDetector):
                 dtype=torch.long)
             scores_3d = bboxes_3d.tensor.new_ones(labels_3d.shape)
 
-            if self.origin[1] == 0.5:
-                centers_2d = points_cam2img(bboxes_3d.gravity_center, cam2img)
-            elif self.origin[1] == 1.0:
-                centers_2d = points_cam2img(bboxes_3d.bottom_center, cam2img)
-            else:
-                raise ValueError(f'Unsupported origin {self.origin}')
+            dst = bboxes_3d.tensor.new_tensor((0.5, 1.0, 0.5))
+            src = bboxes_3d.tensor.new_tensor(self.origin)
+            centers_3d = bboxes_3d.bottom_center - bboxes_3d.dims * (dst - src)
+            centers_2d = points_cam2img(centers_3d, cam2img)
 
             shift_height = 0
             if self.pred_shift_height:
@@ -71,8 +75,10 @@ class MonoGpTest(Base3DDetector):
 
         return predictions
 
-    def _forward(self, batch_inputs, batch_data_samples=None):
+    def _forward(self,
+                 batch_inputs: Tensor,
+                 batch_data_samples: OptSampleList = None):
         raise NotImplementedError
 
-    def extract_feat(self, batch_inputs):
+    def extract_feat(self, batch_inputs: Tensor):
         raise NotImplementedError
