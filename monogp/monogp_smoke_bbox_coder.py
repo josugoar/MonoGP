@@ -61,24 +61,24 @@ class MonoGpSMOKECoder(SMOKECoder):
         obj_id = batch_id.repeat(1, N // N_batch).flatten()
         trans_mats = trans_mats[obj_id]
         cam2imgs = cam2imgs[obj_id]
+        trans_mats_inv = trans_mats.inverse()
+        cam2imgs_inv = cam2imgs.inverse()
         centers2d = points + centers2d_offsets
+        centers2d_extend = torch.cat((centers2d, centers2d.new_ones(N, 1)),
+                                     dim=1)
+        # expand project points as [N, 3, 1]
+        centers2d_extend = centers2d_extend.unsqueeze(-1)
+        # transform project points back on original image
+        centers2d_img = torch.matmul(trans_mats_inv, centers2d_extend)
         if use_ground_plane:
             locations = points_img2plane(
-                centers2d,
+                centers2d_img.squeeze(2),
                 dimensions[:, 1],
                 cam2imgs,
                 planes,
                 shift_heights,
                 origin=origin)
         else:
-            trans_mats_inv = trans_mats.inverse()
-            cam2imgs_inv = cam2imgs.inverse()
-            centers2d_extend = torch.cat((centers2d, centers2d.new_ones(N, 1)),
-                                         dim=1)
-            # expand project points as [N, 3, 1]
-            centers2d_extend = centers2d_extend.unsqueeze(-1)
-            # transform project points back on original image
-            centers2d_img = torch.matmul(trans_mats_inv, centers2d_extend)
             centers2d_img = centers2d_img * depths.view(N, -1, 1)
             if cam2imgs.shape[1] == 4:
                 centers2d_img = torch.cat(
