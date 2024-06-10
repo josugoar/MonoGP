@@ -1,4 +1,8 @@
+from typing import Tuple, Union
+
+import numpy as np
 import torch
+from torch import Tensor
 
 from mmdet3d.utils import array_converter
 
@@ -7,12 +11,14 @@ DEPTH = 10
 
 @array_converter(
     apply_to=('centers_2d', 'height', 'cam2img', 'plane', 'shift_height'))
-def points_img2plane(centers_2d,
-                     height,
-                     cam2img,
-                     plane,
-                     shift_height=0,
-                     origin=(0.5, 0.5, 0.5)):
+def points_img2plane(
+    centers_2d: Union[Tensor, np.ndarray],
+    height: Union[Tensor, np.ndarray],
+    cam2img: Union[Tensor, np.ndarray],
+    plane: Union[Tensor, np.ndarray],
+    shift_height: Union[Tensor, np.ndarray] = 0,
+    origin: Tuple[float, float, float] = (0.5, 0.5, 0.5)
+) -> Union[Tensor, np.ndarray]:
     shift_height = shift_height + height * (1.0 - origin[1])
 
     num_points = centers_2d.shape[0]
