@@ -14,7 +14,7 @@ class MonoGpTest(Base3DDetector):
 
     def __init__(self,
                  *args,
-                 pred_shift_height=False,
+                 pred_shift_height=True,
                  origin=(0.5, 0.5, 0.5),
                  **kwargs):
         self.pred_shift_height = pred_shift_height
