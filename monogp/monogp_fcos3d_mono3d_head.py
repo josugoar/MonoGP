@@ -53,7 +53,7 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                 bbox_pred[:, self.bbox_code_size - 1:-1]
             ],
                                   dim=1)
-            scale = scale[:3] + scale[-1:] + scale[3:]
+            scale = scale[:3] + scale[-1:] + scale[3:-1]
 
         max_regress_range = stride * self.regress_ranges[0][1] / \
             self.strides[0]
@@ -326,7 +326,8 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                     code_weight = code_weight[:self.bbox_code_size -
                                               1] + code_weight[
                                                   -1:] + code_weight[
-                                                      self.bbox_code_size - 1:]
+                                                      self.bbox_code_size -
+                                                      1:-1]
                 bbox_weights = bbox_weights * bbox_weights.new_tensor(
                     code_weight)
 
@@ -356,7 +357,7 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                     weight=bbox_weights[:, 7:9],
                     avg_factor=equal_weights.sum())
             if self.pred_shift_height:
-                loss_dict['loss_shift_height'] = self.loss_dir(
+                loss_dict['loss_shift_height'] = self.loss_bbox(
                     pos_bbox_preds[:, self.bbox_code_size - 1],
                     pos_bbox_targets_3d[:, self.bbox_code_size - 1],
                     weight=bbox_weights[:, self.bbox_code_size - 1],
