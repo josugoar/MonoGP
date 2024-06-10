@@ -48,7 +48,8 @@ class ObjectPlaneAlignment(BaseTransform):
         bboxes_3d.tensor[:, 1] = plane[3]
 
         centers_2d_with_depth = points_cam2img(
-            bboxes_3d.gravity_center, cam2img, with_depth=True)
+            bboxes_3d.gravity_center, cam2img,
+            with_depth=True).numpy(force=True)
 
         input_dict['centers_2d'] = centers_2d_with_depth[:, :2]
         input_dict['depths'] = centers_2d_with_depth[:, 2]
