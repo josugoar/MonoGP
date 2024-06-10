@@ -21,9 +21,9 @@ class MonoGpTest(Base3DDetector):
                  pred_shift_height: bool = False,
                  origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
                  **kwargs):
+        super().__init__(*args, **kwargs)
         self.pred_shift_height = pred_shift_height
         self.origin = origin
-        super().__init__(*args, **kwargs)
 
     def loss(self, batch_inputs: Tensor,
              batch_data_samples: SampleList) -> Union[dict, tuple]:
