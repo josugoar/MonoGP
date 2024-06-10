@@ -28,7 +28,7 @@ def points_img2plane(centers_2d,
     # Do operation in homogeneous coordinates.
     num_points = unnormed_xys.shape[0]
     homo_xys = torch.cat([unnormed_xys, xys.new_ones((num_points, 1))], dim=1)
-    points3D = torch.mm(homo_xys, inv_cam2img)[:, :3]
+    points3D = (homo_xys.unsqueeze(1) @ inv_cam2img).squeeze(1)[:, :3]
 
     scale = torch.unsqueeze((plane[..., 3] - shift_height) / points3D[:, 1], 1)
     centers_3d = scale * points3D
