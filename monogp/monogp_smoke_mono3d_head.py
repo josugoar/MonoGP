@@ -148,7 +148,9 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
         locations, dimensions, orientations = locations[indices], dimensions[
             indices], orientations[indices]
 
-        locations[:, 1] += dimensions[:, 1] * (1.0 - self.origin[1])
+        dst = locations.new_tensor((0.5, 1.0, 0.5))
+        src = locations.new_tensor(self.origin)
+        locations += dimensions * (dst - src)
 
         gt_locations = gt_locations[indices]
 
