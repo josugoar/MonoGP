@@ -1,15 +1,7 @@
 _base_ = './smoke_dla34_dlaneck_gn-all_4xb8-6x_kitti-mono3d.py'
 
 # model settings
-model = dict(
-    bbox_head=dict(
-        reg_branch=(
-            (256, ),  # offset
-            (),  # depth
-            (256, ),  # size
-            (256, ),  # rot
-        ),
-        use_ground_plane=True))
+model = dict(bbox_head=dict(use_ground_plane=True))
 
 backend_args = None
 
