@@ -35,11 +35,9 @@ class GroundPlaneKittiMetric(KittiMetric):
                 dst = np.array((0.5, 1.0, 0.5))
                 src = np.array(self.origin)
 
-                centers_3d = location - dimensions * (dst - src)
-                centers_2d = points_cam2img(centers_3d, cam2img)
-
+                location -= dimensions * (dst - src)
                 location = points_img2plane(
-                    centers_2d,
+                    points_cam2img(location, cam2img),
                     dimensions[:, 1],
                     cam2img,
                     plane,
