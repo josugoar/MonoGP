@@ -3,7 +3,10 @@ _base_ = './smoke_dla34_dlaneck_gn-all_4xb8-6x_kitti-mono3d.py'
 # model settings
 model = dict(
     bbox_head=dict(
-        group_reg_dims=(9, ), use_ground_plane=True, pred_shift_height=True))
+        group_reg_dims=(9, ),
+        use_ground_plane=True,
+        pred_shift_height=True,
+        origin=(0.5, 1.0, 0.5)))
 
 backend_args = None
 
@@ -28,6 +31,7 @@ train_pipeline = [
         with_bbox_3d=True,
         with_label_3d=True,
         with_bbox_depth=True),
+    dict(type='BottomCenterToCenters2DWithDepth'),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
     dict(type='RandomShiftScale', shift_scale=(0.2, 0.4), aug_prob=0.3),
     dict(type='AffineResize', img_scale=(1280, 384), down_ratio=4),
