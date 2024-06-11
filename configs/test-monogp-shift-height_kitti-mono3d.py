@@ -34,3 +34,5 @@ test_pipeline = [
 ]
 
 test_dataloader = dict(dataset=dict(pipeline=test_pipeline))
+
+default_hooks = dict(visualization=dict(type='BEVDet3DVisualizationHook'))

@@ -49,3 +49,5 @@ val_evaluator = [
         backend_args=backend_args)
 ]
 test_evaluator = val_evaluator
+
+default_hooks = dict(visualization=dict(type='BEVDet3DVisualizationHook'))
