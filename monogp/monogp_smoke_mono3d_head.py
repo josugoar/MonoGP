@@ -21,10 +21,10 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
                  pred_shift_height: bool = False,
                  origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
                  **kwargs) -> None:
-        super().__init__(*args, **kwargs)
         self.use_ground_plane = use_ground_plane
         self.pred_shift_height = pred_shift_height
         self.origin = origin
+        super().__init__(*args, **kwargs)
 
     def predict_by_feat(self,
                         cls_scores: List[Tensor],

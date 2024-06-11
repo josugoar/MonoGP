@@ -26,10 +26,10 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                  pred_shift_height: bool = False,
                  origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
                  **kwargs) -> None:
-        super().__init__(*args, **kwargs)
         self.pred_shift_height = pred_shift_height
         self.use_ground_plane = use_ground_plane
         self.origin = origin
+        super().__init__(*args, **kwargs)
         if self.pred_shift_height and self.pred_keypoints:
             self.kpts_start += 1
 
