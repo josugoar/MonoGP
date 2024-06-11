@@ -20,9 +20,15 @@ class MonoGpTest(Base3DDetector):
                  *args,
                  pred_shift_height: bool = False,
                  origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
+                 noise: bool = False,
+                 noise_mean: float = 0.0,
+                 noise_std: float = 1.0,
                  **kwargs):
         self.pred_shift_height = pred_shift_height
         self.origin = origin
+        self.noise = noise
+        self.noise_mean = noise_mean
+        self.noise_std = noise_std
         super().__init__(*args, **kwargs)
 
     def loss(self, batch_inputs: Tensor,
@@ -48,6 +54,9 @@ class MonoGpTest(Base3DDetector):
             src = bboxes_3d.tensor.new_tensor(self.origin)
             centers_3d = bboxes_3d.bottom_center - bboxes_3d.dims * (dst - src)
             centers_2d = points_cam2img(centers_3d, cam2img)
+            if self.noise:
+                centers_2d += torch.normal(self.noise_mean, self.noise_std,
+                                           centers_2d.shape)
 
             shift_height = 0
             if self.pred_shift_height:
