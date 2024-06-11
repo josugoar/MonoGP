@@ -59,6 +59,8 @@ class MonoGpSMOKECoder(SMOKECoder):
         N_batch = cam2imgs.shape[0]
         batch_id = torch.arange(N_batch).unsqueeze(1)
         obj_id = batch_id.repeat(1, N // N_batch).flatten()
+        if use_ground_plane:
+            planes = planes[obj_id]
         trans_mats = trans_mats[obj_id]
         cam2imgs = cam2imgs[obj_id]
         trans_mats_inv = trans_mats.inverse()
