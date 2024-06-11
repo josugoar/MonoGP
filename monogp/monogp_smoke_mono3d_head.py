@@ -26,6 +26,14 @@ class MonoGpSMOKEMono3DHead(SMOKEMono3DHead):
         self.origin = origin
         super().__init__(*args, **kwargs)
 
+    def forward_single(self, x: Tensor) -> Tuple[Tensor, Tensor]:
+        cls_score, bbox_pred = super().forward_single(x)
+        if self.use_ground_plane:
+            # (N, C, H, W)
+            shift_heights = bbox_pred[:, 8, ...]
+            bbox_pred[:, 8, ...] = shift_heights.sigmoid() - 0.5
+        return cls_score, bbox_pred
+
     def predict_by_feat(self,
                         cls_scores: List[Tensor],
                         bbox_preds: List[Tensor],
