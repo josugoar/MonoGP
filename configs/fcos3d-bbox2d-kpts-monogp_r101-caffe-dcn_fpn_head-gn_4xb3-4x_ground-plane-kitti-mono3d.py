@@ -40,9 +40,9 @@ train_pipeline = [
         with_bbox_3d=True,
         with_label_3d=True,
         with_bbox_depth=True),
+    dict(type='BBoxes3DToBBoxes'),
     dict(type='Resize3D', scale=(1242, 375), keep_ratio=True),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
-    dict(type='BBoxes3DToBBoxes'),
     dict(
         type='Pack3DDetInputs',
         keys=[
