@@ -74,7 +74,7 @@ class MonoGpSMOKECoder(SMOKECoder):
         centers2d_img = torch.matmul(trans_mats_inv, centers2d_extend)
         if use_ground_plane:
             locations = points_img2plane(
-                centers2d_img.squeeze(2),
+                centers2d_img.squeeze(-1),
                 dimensions[:, 1],
                 cam2imgs,
                 planes,
