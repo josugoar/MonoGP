@@ -6,7 +6,7 @@ from .monogp_smoke_bbox_coder import MonoGpSMOKECoder
 from .monogp_smoke_mono3d_head import MonoGpSMOKEMono3DHead
 from .monogp_test import MonoGpTest
 from .transforms_3d import (BBoxes3DToBBoxes, BottomCenterToCenters2DWithDepth,
-                            ObjectPlaneAlignment, ObjectShiftHeight)
+                            ObjectShiftHeight)
 from .transforms import bbox3d_flip
 from .visualization_hook import BEVDet3DVisualizationHook
 
@@ -14,6 +14,5 @@ __all__ = [
     'GroundPlaneKittiMetric', 'MonoDet3DTTAModel', 'MonoGpFCOS3DBBoxCoder',
     'MonoGpFCOS3DMono3DHead', 'MonoGpSMOKECoder', 'MonoGpSMOKEMono3DHead',
     'MonoGpTest', 'BBoxes3DToBBoxes', 'BottomCenterToCenters2DWithDepth',
-    'ObjectPlaneAlignment', 'ObjectShiftHeight', 'bbox3d_flip',
-    'BEVDet3DVisualizationHook'
+    'ObjectShiftHeight', 'bbox3d_flip', 'BEVDet3DVisualizationHook'
 ]
