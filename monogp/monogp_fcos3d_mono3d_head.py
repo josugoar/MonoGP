@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple
 import numpy as np
 import torch
 from mmcv.cnn import Scale
-from mmdet.models.utils import multi_apply
 from mmdet.structures.bbox import distance2bbox
 from mmengine.structures import InstanceData
 from torch import Tensor
@@ -28,12 +27,10 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                  use_ground_plane: bool = False,
                  pred_shift_height: bool = False,
                  origin: Tuple[float, float, float] = (0.5, 0.5, 0.5),
-                 use_gravity_center_target: bool = False,
                  **kwargs) -> None:
         self.use_ground_plane = use_ground_plane
         self.pred_shift_height = pred_shift_height
         self.origin = origin
-        self.use_gravity_center_target = use_gravity_center_target
         super().__init__(*args, **kwargs)
         if self.pred_shift_height and self.pred_keypoints:
             self.kpts_start += 1
@@ -275,7 +272,7 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
                                            bbox_preds[0].device)
         labels_3d, bbox_targets_3d, centerness_targets, attr_targets = \
             self.get_targets(all_level_points, batch_gt_instances_3d,
-                             batch_gt_instances, batch_img_metas)
+                             batch_gt_instances)
 
         num_imgs = cls_scores[0].size(0)
         # flatten cls_scores and targets
@@ -675,218 +672,3 @@ class MonoGpFCOS3DMono3DHead(PGDHead):
             results_2d.labels = labels
 
         return results, results_2d
-
-    def get_targets(
-        self,
-        points: List[Tensor],
-        batch_gt_instances_3d: InstanceList,
-        batch_gt_instances: InstanceList,
-        batch_img_metas: List[dict],
-    ) -> Tuple[List[Tensor], List[Tensor], List[Tensor], List[Tensor]]:
-        assert len(points) == len(self.regress_ranges)
-        num_levels = len(points)
-        # expand regress ranges to align with points
-        expanded_regress_ranges = [
-            points[i].new_tensor(self.regress_ranges[i])[None].expand_as(
-                points[i]) for i in range(num_levels)
-        ]
-        # concat all levels points and regress ranges
-        concat_regress_ranges = torch.cat(expanded_regress_ranges, dim=0)
-        concat_points = torch.cat(points, dim=0)
-
-        # the number of points per img, per lvl
-        num_points = [center.size(0) for center in points]
-
-        if 'attr_labels' not in batch_gt_instances_3d[0]:
-            for gt_instances_3d in batch_gt_instances_3d:
-                gt_instances_3d.attr_labels = \
-                    gt_instances_3d.labels_3d.new_full(
-                        gt_instances_3d.labels_3d.shape,
-                        self.attr_background_label)
-
-        # get labels and bbox_targets of each image
-        _, bbox_targets_list, labels_3d_list, bbox_targets_3d_list, \
-            centerness_targets_list, attr_targets_list = multi_apply(
-                self._get_target_single,
-                batch_gt_instances_3d,
-                batch_gt_instances,
-                batch_img_metas,
-                points=concat_points,
-                regress_ranges=concat_regress_ranges,
-                num_points_per_lvl=num_points)
-
-        # split to per img, per level
-        bbox_targets_list = [
-            bbox_targets.split(num_points, 0)
-            for bbox_targets in bbox_targets_list
-        ]
-        labels_3d_list = [
-            labels_3d.split(num_points, 0) for labels_3d in labels_3d_list
-        ]
-        bbox_targets_3d_list = [
-            bbox_targets_3d.split(num_points, 0)
-            for bbox_targets_3d in bbox_targets_3d_list
-        ]
-        centerness_targets_list = [
-            centerness_targets.split(num_points, 0)
-            for centerness_targets in centerness_targets_list
-        ]
-        attr_targets_list = [
-            attr_targets.split(num_points, 0)
-            for attr_targets in attr_targets_list
-        ]
-
-        # concat per level image
-        concat_lvl_labels_3d = []
-        concat_lvl_bbox_targets_3d = []
-        concat_lvl_centerness_targets = []
-        concat_lvl_attr_targets = []
-        for i in range(num_levels):
-            concat_lvl_labels_3d.append(
-                torch.cat([labels[i] for labels in labels_3d_list]))
-            concat_lvl_centerness_targets.append(
-                torch.cat([
-                    centerness_targets[i]
-                    for centerness_targets in centerness_targets_list
-                ]))
-            bbox_targets_3d = torch.cat([
-                bbox_targets_3d[i] for bbox_targets_3d in bbox_targets_3d_list
-            ])
-            if self.pred_bbox2d:
-                bbox_targets = torch.cat(
-                    [bbox_targets[i] for bbox_targets in bbox_targets_list])
-                bbox_targets_3d = torch.cat([bbox_targets_3d, bbox_targets],
-                                            dim=1)
-            concat_lvl_attr_targets.append(
-                torch.cat(
-                    [attr_targets[i] for attr_targets in attr_targets_list]))
-            if self.norm_on_bbox:
-                bbox_targets_3d[:, :2] = \
-                    bbox_targets_3d[:, :2] / self.strides[i]
-                if self.pred_bbox2d:
-                    bbox_targets_3d[:, -4:] = \
-                        bbox_targets_3d[:, -4:] / self.strides[i]
-            concat_lvl_bbox_targets_3d.append(bbox_targets_3d)
-        return concat_lvl_labels_3d, concat_lvl_bbox_targets_3d, \
-            concat_lvl_centerness_targets, concat_lvl_attr_targets
-
-    def _get_target_single(
-            self, gt_instances_3d: InstanceData, gt_instances: InstanceData,
-            img_meta: dict, points: Tensor, regress_ranges: Tensor,
-            num_points_per_lvl: List[int]) -> Tuple[Tensor, ...]:
-        view = np.array(img_meta['cam2img'])
-        num_points = points.size(0)
-        num_gts = len(gt_instances_3d)
-        gt_bboxes = gt_instances.bboxes
-        gt_labels = gt_instances.labels
-        gt_bboxes_3d = gt_instances_3d.bboxes_3d
-        gt_labels_3d = gt_instances_3d.labels_3d
-        centers_2d = gt_instances_3d.centers_2d
-        depths = gt_instances_3d.depths
-        attr_labels = gt_instances_3d.attr_labels
-
-        if not isinstance(gt_bboxes_3d, torch.Tensor):
-            gt_bboxes_3d = gt_bboxes_3d.tensor.to(gt_bboxes.device)
-        if num_gts == 0:
-            return gt_labels.new_full((num_points,), self.background_label), \
-                   gt_bboxes.new_zeros((num_points, 4)), \
-                   gt_labels_3d.new_full(
-                       (num_points,), self.background_label), \
-                   gt_bboxes_3d.new_zeros((num_points, self.bbox_code_size)), \
-                   gt_bboxes_3d.new_zeros((num_points,)), \
-                   attr_labels.new_full(
-                       (num_points,), self.attr_background_label)
-
-        # change orientation to local yaw
-        gt_bboxes_3d[..., 6] = -torch.atan2(
-            gt_bboxes_3d[..., 0], gt_bboxes_3d[..., 2]) + gt_bboxes_3d[..., 6]
-
-        areas = (gt_bboxes[:, 2] - gt_bboxes[:, 0]) * (
-            gt_bboxes[:, 3] - gt_bboxes[:, 1])
-        areas = areas[None].repeat(num_points, 1)
-        regress_ranges = regress_ranges[:, None, :].expand(
-            num_points, num_gts, 2)
-        gt_bboxes = gt_bboxes[None].expand(num_points, num_gts, 4)
-        centers_2d = centers_2d[None].expand(num_points, num_gts, 2)
-        gt_bboxes_3d = gt_bboxes_3d[None].expand(num_points, num_gts,
-                                                 self.bbox_code_size)
-        depths = depths[None, :, None].expand(num_points, num_gts, 1)
-        xs, ys = points[:, 0], points[:, 1]
-        xs = xs[:, None].expand(num_points, num_gts)
-        ys = ys[:, None].expand(num_points, num_gts)
-
-        delta_xs = (xs - centers_2d[..., 0])[..., None]
-        delta_ys = (ys - centers_2d[..., 1])[..., None]
-        bbox_targets_3d = torch.cat(
-            (delta_xs, delta_ys, depths, gt_bboxes_3d[..., 3:]), dim=-1)
-
-        left = xs - gt_bboxes[..., 0]
-        right = gt_bboxes[..., 2] - xs
-        top = ys - gt_bboxes[..., 1]
-        bottom = gt_bboxes[..., 3] - ys
-        bbox_targets = torch.stack((left, top, right, bottom), -1)
-
-        if self.use_gravity_center_target:
-            centers_2d = points_cam2img(
-                gt_instances_3d.bboxes_3d.gravity_center,
-                centers_2d.new_tensor(view))
-            centers_2d = centers_2d[None].expand(num_points, num_gts, 2)
-
-        assert self.center_sampling is True, 'Setting center_sampling to '\
-            'False has not been implemented for FCOS3D.'
-        # condition1: inside a `center bbox`
-        radius = self.center_sample_radius
-        center_xs = centers_2d[..., 0]
-        center_ys = centers_2d[..., 1]
-        center_gts = torch.zeros_like(gt_bboxes)
-        stride = center_xs.new_zeros(center_xs.shape)
-
-        # project the points on current lvl back to the `original` sizes
-        lvl_begin = 0
-        for lvl_idx, num_points_lvl in enumerate(num_points_per_lvl):
-            lvl_end = lvl_begin + num_points_lvl
-            stride[lvl_begin:lvl_end] = self.strides[lvl_idx] * radius
-            lvl_begin = lvl_end
-
-        center_gts[..., 0] = center_xs - stride
-        center_gts[..., 1] = center_ys - stride
-        center_gts[..., 2] = center_xs + stride
-        center_gts[..., 3] = center_ys + stride
-
-        cb_dist_left = xs - center_gts[..., 0]
-        cb_dist_right = center_gts[..., 2] - xs
-        cb_dist_top = ys - center_gts[..., 1]
-        cb_dist_bottom = center_gts[..., 3] - ys
-        center_bbox = torch.stack(
-            (cb_dist_left, cb_dist_top, cb_dist_right, cb_dist_bottom), -1)
-        inside_gt_bbox_mask = center_bbox.min(-1)[0] > 0
-
-        # condition2: limit the regression range for each location
-        max_regress_distance = bbox_targets.max(-1)[0]
-        inside_regress_range = (
-            (max_regress_distance >= regress_ranges[..., 0])
-            & (max_regress_distance <= regress_ranges[..., 1]))
-
-        # center-based criterion to deal with ambiguity
-        dists = torch.sqrt(torch.sum(bbox_targets_3d[..., :2]**2, dim=-1))
-        dists[inside_gt_bbox_mask == 0] = INF
-        dists[inside_regress_range == 0] = INF
-        min_dist, min_dist_inds = dists.min(dim=1)
-
-        labels = gt_labels[min_dist_inds]
-        labels_3d = gt_labels_3d[min_dist_inds]
-        attr_labels = attr_labels[min_dist_inds]
-        labels[min_dist == INF] = self.background_label  # set as BG
-        labels_3d[min_dist == INF] = self.background_label  # set as BG
-        attr_labels[min_dist == INF] = self.attr_background_label
-
-        bbox_targets = bbox_targets[range(num_points), min_dist_inds]
-        bbox_targets_3d = bbox_targets_3d[range(num_points), min_dist_inds]
-        relative_dists = torch.sqrt(
-            torch.sum(bbox_targets_3d[..., :2]**2,
-                      dim=-1)) / (1.414 * stride[:, 0])
-        # [N, 1] / [N, 1]
-        centerness_targets = torch.exp(-self.centerness_alpha * relative_dists)
-
-        return labels, bbox_targets, labels_3d, bbox_targets_3d, \
-            centerness_targets, attr_labels
