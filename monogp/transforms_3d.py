@@ -37,28 +37,7 @@ class BottomCenterToCenters2DWithDepth(BaseTransform):
         return input_dict
 
 
-@TRANSFORMS.register_module()
-class ObjectPlaneAlignment(BaseTransform):
-
-    def transform(self, input_dict: dict) -> dict:
-        bboxes_3d = input_dict['gt_bboxes_3d']
-        cam2img = input_dict['cam2img']
-        plane = input_dict['plane']
-
-        bboxes_3d.tensor[:, 4] += plane[3] - bboxes_3d.bottom_height
-        bboxes_3d.tensor[:, 1] = plane[3]
-
-        centers_2d_with_depth = points_cam2img(
-            bboxes_3d.gravity_center.numpy(force=True),
-            cam2img,
-            with_depth=True)
-
-        input_dict['centers_2d'] = centers_2d_with_depth[:, :2]
-        input_dict['depths'] = centers_2d_with_depth[:, 2]
-
-        return input_dict
-
-
+# TODO: FIX!!!!!!!!!!!!
 @TRANSFORMS.register_module()
 class ObjectShiftHeight(BaseTransform):
 
