@@ -50,17 +50,26 @@ class MonoGpTest(Base3DDetector):
                 dtype=torch.long)
             scores_3d = bboxes_3d.tensor.new_ones(labels_3d.shape)
 
-            dst = bboxes_3d.tensor.new_tensor((0.5, 1.0, 0.5))
-            src = bboxes_3d.tensor.new_tensor(self.origin)
-            centers_3d = bboxes_3d.bottom_center - bboxes_3d.dims * (dst - src)
+            dst = bboxes_3d.tensor.new_tensor(self.origin)
+            src = bboxes_3d.tensor.new_tensor((0.5, 1.0, 0.5))
+            centers_3d = bboxes_3d.bottom_center + bboxes_3d.dims * (dst - src)
             centers_2d = points_cam2img(centers_3d, cam2img)
-            if self.noise:
-                centers_2d += torch.normal(self.noise_mean, self.noise_std,
-                                           centers_2d.shape)
 
+            # TODO: FIX!!!!!!!!!!!!
             shift_height = 0
             if self.pred_shift_height:
                 shift_height = plane[3] - bboxes_3d.bottom_height
+
+            if self.noise:
+                centers_2d += torch.normal(self.noise_mean, self.noise_std,
+                                           centers_2d.shape)
+                bboxes_3d.tensor += torch.normal(self.noise_mean,
+                                                 self.noise_std,
+                                                 bboxes_3d.shape)
+                if self.pred_shift_height:
+                    shift_height += torch.normal(self.noise_mean,
+                                                 self.noise_std,
+                                                 shift_height.shape)
 
             bboxes_3d.tensor[:, :3] = points_img2plane(
                 centers_2d,

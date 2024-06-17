@@ -32,16 +32,21 @@ class GroundPlaneKittiMetric(KittiMetric):
                 dimensions = kitti_annos['dimensions']
                 location = kitti_annos['location']
 
-                dst = np.array((0.5, 1.0, 0.5))
-                src = np.array(self.origin)
-                location -= dimensions * (dst - src)
+                dst = np.array(self.origin)
+                src = np.array((0.5, 1.0, 0.5))
+                location += dimensions * (dst - src)
+
                 location = points_cam2img(location, cam2img)
+
                 location = points_img2plane(
                     location,
                     dimensions[:, 1],
                     cam2img,
                     plane,
                     origin=self.origin)
+
+                dst = src
+                src = dst
                 location += dimensions * (dst - src)
 
                 kitti_annos['location'] = location
