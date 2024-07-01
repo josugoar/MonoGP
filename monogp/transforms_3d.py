@@ -37,7 +37,7 @@ class BottomCenterToCenters2DWithDepth(BaseTransform):
         return input_dict
 
 
-# TODO: FIX!!!!!!!!!!!!
+# FIXME: calculate shift_height taking plane rotation into account
 @TRANSFORMS.register_module()
 class ObjectShiftHeight(BaseTransform):
 
