@@ -9,7 +9,7 @@ from mmdet3d.utils import array_converter
 DEPTH = 10
 
 
-# TODO: FIX!!!!!!!!!!!!
+# FIX: take plane rotation into account when calculating scale
 @array_converter(
     apply_to=('centers_2d', 'height', 'cam2img', 'plane', 'shift_height'))
 def points_img2plane(
