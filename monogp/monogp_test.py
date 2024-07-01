@@ -55,7 +55,7 @@ class MonoGpTest(Base3DDetector):
             centers_3d = bboxes_3d.bottom_center + bboxes_3d.dims * (dst - src)
             centers_2d = points_cam2img(centers_3d, cam2img)
 
-            # TODO: FIX!!!!!!!!!!!!
+            # FIXME: calculate shift_height taking plane rotation into account
             shift_height = 0
             if self.pred_shift_height:
                 shift_height = plane[3] - bboxes_3d.bottom_height
