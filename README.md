@@ -1,7 +1,7 @@
 # MonoGP
 
 <p align="center">
-  <img src="assets/monogp.png" alt="argdeco" width="1280" height="320" />
+  <img src="assets/monogp.png" alt="monogp" width="1280" height="320" />
 </p>
 
 <h1></h1>
