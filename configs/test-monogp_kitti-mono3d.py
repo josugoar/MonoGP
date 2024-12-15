@@ -4,7 +4,7 @@ _base_ = [
     'mmdet3d::_base_/default_runtime.py'
 ]
 
-custom_imports = dict(imports=['projects.MonoGP.monogp'])
+custom_imports = dict(imports=['projects.monogp.monogp'])
 
 model = dict(type='MonoGpTest')
 
