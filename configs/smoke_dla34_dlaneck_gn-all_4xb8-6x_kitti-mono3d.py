@@ -1,6 +1,6 @@
 _base_ = 'mmdet3d::smoke/smoke_dla34_dlaneck_gn-all_4xb8-6x_kitti-mono3d.py'
 
-custom_imports = dict(imports=['projects.MonoGP.monogp'])
+custom_imports = dict(imports=['projects.monogp.monogp'])
 
 # model settings
 model = dict(
