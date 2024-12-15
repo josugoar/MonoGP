@@ -1,4 +1,4 @@
-# MonoGP
+# monogp
 
 <p align="center">
   <img src="assets/monogp.png" alt="monogp" width="1280" height="320" />
