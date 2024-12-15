@@ -8,6 +8,15 @@
 
 > Ground Plane Projection for Monocular General-Purpose 3D Object Detection
 
+## Usage
+
+```sh
+# Clone MMDetection3D
+git clone https://github.com/open-mmlab/mmdetection3d.git
+# Clone MonoGP to the correctly named directory in the projects folder
+git clone https://github.com/josugoar/monogp.git projects/MonoGP
+```
+
 ## [Weights](https://drive.google.com/drive/folders/1ce1w8c4vzSpj-GNz3PPrfdEepjvrQQDm?usp=sharing)
 
 > [!NOTE]  
