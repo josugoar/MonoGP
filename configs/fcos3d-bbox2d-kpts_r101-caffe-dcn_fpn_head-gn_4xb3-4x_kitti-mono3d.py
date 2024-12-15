@@ -1,6 +1,6 @@
 _base_ = 'mmdet3d::pgd/pgd_r101-caffe_fpn_head-gn_4xb3-4x_kitti-mono3d.py'
 
-custom_imports = dict(imports=['projects.MonoGP.monogp'])
+custom_imports = dict(imports=['projects.monogp.monogp'])
 
 # model settings
 model = dict(
